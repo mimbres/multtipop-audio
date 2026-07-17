@@ -13,8 +13,12 @@ import time
 from pathlib import Path
 from typing import Any, Sequence
 
-from audio_processing import OUTPUT_FORMATS, FlashSRAudioProcessor, audio_is_valid
-from downloader import (
+from multtipop_audio.audio_processing import (
+    OUTPUT_FORMATS,
+    FlashSRAudioProcessor,
+    audio_is_valid,
+)
+from multtipop_audio.downloader import (
     DEFAULT_REPO_ID,
     AudioRecord,
     DownloadError,
@@ -25,7 +29,7 @@ from downloader import (
 
 
 LOGGER = logging.getLogger("multtipop_pipeline")
-PROJECT_ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:

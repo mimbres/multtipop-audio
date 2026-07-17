@@ -7,7 +7,7 @@ import pytest
 import soundfile as sf
 import torch
 
-from audio_processing import (
+from multtipop_audio.audio_processing import (
     SAMPLE_RATE,
     audio_is_valid,
     build_encode_command,

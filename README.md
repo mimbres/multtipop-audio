@@ -16,19 +16,7 @@ the initial attempt.
 
 ## Pipeline
 
-```mermaid
-flowchart LR
-    A["Hugging Face snapshot<br/>metadata + MIDI"] --> B["Resolve YouTube<br/>time range"]
-    B --> C["yt-dlp<br/>audio download"]
-    C --> D["FlashSR<br/>48 kHz stereo"]
-    D --> E{"Encode"}
-    E --> O["Opus"]
-    E --> M["MP3 320k"]
-    E --> F["FLAC 24-bit"]
-    O & M & F --> V["FFprobe validation<br/>atomic publish"]
-    V --> R["$DATA_ROOT/multtipop/audio/{ID}"]
-    C -. "failed after retries" .-> L["logs/failed_ids.log"]
-```
+![MulTTiPop audio processing pipeline](assets/multtipop_audio_pipeline.png)
 
 ## Requirements
 

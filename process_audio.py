@@ -6,7 +6,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from audio_processing import (
+from multtipop_audio.audio_processing import (
     OUTPUT_FORMATS,
     FlashSRAudioProcessor,
     normalize_output_format,

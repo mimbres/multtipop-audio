@@ -3,8 +3,13 @@ from pathlib import Path
 
 import pytest
 
-import downloader
-from downloader import AudioRecord, DownloadError, download_youtube_segment, load_metadata
+from multtipop_audio import downloader
+from multtipop_audio.downloader import (
+    AudioRecord,
+    DownloadError,
+    download_youtube_segment,
+    load_metadata,
+)
 
 
 def test_load_aggregate_metadata(tmp_path: Path) -> None:
@@ -36,6 +41,27 @@ def test_rejects_path_traversal_id(tmp_path: Path) -> None:
     (tmp_path / "metadata.json").write_text(json.dumps(payload))
     with pytest.raises(ValueError, match="invalid or missing dataset ID"):
         load_metadata(tmp_path)
+
+
+def test_javascript_runtime_uses_project_local_node(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    node = (
+        tmp_path
+        / "third_party"
+        / "node_runtime"
+        / "node_modules"
+        / "node"
+        / "bin"
+        / "node"
+    )
+    node.parent.mkdir(parents=True)
+    node.write_text("")
+    monkeypatch.delenv("YTDLP_NODE_PATH", raising=False)
+    monkeypatch.setattr(downloader, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(downloader.shutil, "which", lambda _name: None)
+
+    assert downloader._javascript_runtime() == {"node": {"path": str(node)}}
 
 
 def test_download_retries_three_times_after_initial_attempt(

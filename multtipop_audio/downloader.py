@@ -16,6 +16,7 @@ from typing import Any, Iterable, Sequence
 
 
 LOGGER = logging.getLogger(__name__)
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_REPO_ID = "gclef-cmu/multtipop"
 _SAFE_ID = re.compile(r"^[A-Za-z0-9_-]+$")
 
@@ -284,7 +285,7 @@ def _clean_download_directory(path: Path) -> None:
 def _javascript_runtime() -> dict[str, dict[str, str]]:
     override = os.environ.get("YTDLP_NODE_PATH")
     local_node = (
-        Path(__file__).resolve().parent
+        PROJECT_ROOT
         / "third_party"
         / "node_runtime"
         / "node_modules"

@@ -13,4 +13,5 @@ if [[ ! -x "${PYTHON_BIN}" ]]; then
   exit 1
 fi
 
-exec "${PYTHON_BIN}" "${PROJECT_ROOT}/run_pipeline.py" "$@"
+cd "${PROJECT_ROOT}"
+exec "${PYTHON_BIN}" -m multtipop_audio.pipeline "$@"

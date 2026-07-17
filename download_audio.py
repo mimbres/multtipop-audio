@@ -7,7 +7,7 @@ import argparse
 import os
 from pathlib import Path
 
-from downloader import download_youtube_segment, load_metadata
+from multtipop_audio.downloader import download_youtube_segment, load_metadata
 
 
 def main() -> None:
