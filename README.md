@@ -30,10 +30,58 @@ receives one initial attempt plus three retries by default.
    count, and duration are validated with `ffprobe` before publishing the final
    file.
 
-The MulTTiPop dataset card recommends downloading only the referenced audio
-segments and using the dataset for evaluation rather than training. Users are
-responsible for complying with YouTube's terms, copyright restrictions, the
-MulTTiPop license, and the FlashSR checkpoint license.
+## Disclaimer
+
+This is an independent, unofficial research utility. It is not created,
+published, endorsed, maintained, or officially provided by the authors of the
+MulTTiPop paper or dataset, nor is it affiliated with YouTube or the owners of
+the referenced music.
+
+All copyrights and related rights in YouTube-hosted material—including musical
+compositions, lyrics, sound recordings, and performances—remain with their
+respective artists, labels, publishers, and other rights holders. This
+repository does not grant any license or permission to download, copy,
+redistribute, publicly perform, or otherwise use that material. The license
+stated for the MulTTiPop dataset should not be assumed to grant rights to
+third-party audio referenced by its metadata.
+
+This software is intended solely for non-commercial academic research and
+evaluation. Users must independently ensure that their use complies with
+YouTube's Terms of Service, applicable copyright and other laws, institutional
+policies, and the licenses of MulTTiPop, FlashSR, and all other dependencies.
+Research use does not by itself make an otherwise unauthorized use lawful.
+
+The software is provided "as is," without warranty of any kind. Use it entirely
+at your own risk. Users bear sole responsibility for downloads, generated
+files, storage, publication, and any legal or ethical consequences arising from
+their use. The repository maintainers accept no liability for such use. This
+notice is informational and is not legal advice.
+
+The official MulTTiPop dataset card recommends downloading only the referenced
+audio segments and using the dataset for evaluation rather than training.
+
+## Citation
+
+If you use MulTTiPop in research, cite the original paper from the dataset
+authors. This citation is for MulTTiPop and does not imply that this unofficial
+repository is associated with or endorsed by the paper authors.
+
+> Nathan Pruyne, Benjamin Stoler, William Chen, Chien-yu Huang, Shinji Watanabe,
+> and Chris Donahue. "MulTTiPop: A Multitrack Transcription Dataset for Pop
+> Music." arXiv preprint arXiv:2607.08756, 2026.
+
+- Paper: <https://arxiv.org/abs/2607.08756>
+- Official dataset: <https://huggingface.co/datasets/gclef-cmu/multtipop>
+
+```bibtex
+@article{pruyne2026multtipop,
+  title   = {MulTTiPop: A Multitrack Transcription Dataset for Pop Music},
+  author  = {Pruyne, Nathan and Stoler, Benjamin and Chen, William and
+             Huang, Chien-yu and Watanabe, Shinji and Donahue, Chris},
+  journal = {arXiv preprint arXiv:2607.08756},
+  year    = {2026}
+}
+```
 
 ## Requirements
 
