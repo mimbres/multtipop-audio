@@ -29,7 +29,7 @@ fi
 
 "${PYTHON}" -m pip install --upgrade pip setuptools wheel
 "${PYTHON}" -m pip install \
-  torch==2.7.0 torchaudio==2.7.0 torchvision==0.22.0 \
+  torch==2.7.0 \
   --index-url https://download.pytorch.org/whl/cu126
 "${PYTHON}" -m pip install -r "${PROJECT_ROOT}/requirements.txt"
 
@@ -49,6 +49,8 @@ if [[ ! -d "${FLASHSR_DIR}/.git" ]]; then
 fi
 git -C "${FLASHSR_DIR}" fetch origin "${FLASHSR_COMMIT}"
 git -C "${FLASHSR_DIR}" checkout --detach "${FLASHSR_COMMIT}"
-"${PYTHON}" -m pip install --no-deps -e "${FLASHSR_DIR}"
+
+# The pipeline imports the pinned source tree directly. Avoid installing its
+# training-only dependency metadata into this inference environment.
 
 printf 'Environment ready. Python: %s\n' "${PYTHON}"

@@ -90,6 +90,7 @@ future results may differ.
 ## Tests
 
 ```bash
+python -m pip install -r requirements-dev.txt
 pytest -q
 ```
 
