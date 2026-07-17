@@ -2,21 +2,26 @@
 set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONDA_BIN="${CONDA_BIN:-/home/work/miniforge/bin/conda}"
-ENV_NAME="${ENV_NAME:-multtipop_audio}"
-ENV_PREFIX="${ENV_PREFIX:-/home/work/miniforge/envs/${ENV_NAME}}"
+CONDA_BIN="${CONDA_BIN:-}"
+ENV_PREFIX="${ENV_PREFIX:-${PROJECT_ROOT}/.venv}"
 PYTHON="${ENV_PREFIX}/bin/python"
 FLASHSR_DIR="${PROJECT_ROOT}/third_party/FlashSR_Inference"
 FLASHSR_COMMIT="2292814a7ef74f61a5479c8d96e653d2f90f369d"
 NODE_RUNTIME_DIR="${PROJECT_ROOT}/third_party/node_runtime"
 NODE_BIN="${NODE_RUNTIME_DIR}/node_modules/node/bin/node"
 
-# The managed kt image pins an NVIDIA alpha build globally. This project uses
-# the matching public CUDA 12.6 wheels instead. It also injects Python 3.12
-# packages through PYTHONPATH, which must not leak into this Python 3.11 env.
+# Keep the Python 3.11 environment isolated from shell-level package overrides.
 unset PIP_CONSTRAINT
 unset PYTHONPATH
 export PYTHONNOUSERSITE=1
+
+if [[ -z "${CONDA_BIN}" ]]; then
+  CONDA_BIN="$(command -v conda || true)"
+fi
+if [[ -z "${CONDA_BIN}" || ! -x "${CONDA_BIN}" ]]; then
+  printf 'Conda was not found. Install Conda or set CONDA_BIN.\n' >&2
+  exit 1
+fi
 
 if [[ ! -x "${PYTHON}" ]]; then
   "${CONDA_BIN}" create -y -p "${ENV_PREFIX}" python=3.11 pip
@@ -28,8 +33,7 @@ fi
   --index-url https://download.pytorch.org/whl/cu126
 "${PYTHON}" -m pip install -r "${PROJECT_ROOT}/requirements.txt"
 
-# Recent yt-dlp versions require Node.js 22+. Install a project-local runtime
-# because the managed kt image currently provides Node.js 20.
+# Install a project-local Node.js 22 runtime for recent yt-dlp versions.
 if [[ ! -x "${NODE_BIN}" ]]; then
   if ! command -v npm >/dev/null 2>&1; then
     printf 'npm is required to install the yt-dlp Node.js 22 runtime.\n' >&2

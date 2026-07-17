@@ -1,178 +1,103 @@
 # MulTTiPop Audio Pipeline
 
-This project downloads the complete
-[`gclef-cmu/multtipop`](https://huggingface.co/datasets/gclef-cmu/multtipop)
-dataset, obtains only the YouTube time ranges referenced by its metadata, applies
-[FlashSR](https://github.com/jakeoneijk/FlashSR_Inference), and writes 48 kHz
-audio files to:
+Download the [`gclef-cmu/multtipop`](https://huggingface.co/datasets/gclef-cmu/multtipop)
+snapshot and its referenced YouTube segments, apply
+[FlashSR](https://github.com/jakeoneijk/FlashSR_Inference), and save 48 kHz audio
+to:
 
 ```text
 $DATA_ROOT/multtipop/audio/{ID}.{opus|mp3|flac}
 ```
 
-Opus is the default. MP3 is encoded at 320 kbit/s CBR by default, while FLAC is
-lossless. The pipeline is resumable: existing valid outputs for the selected
-format are skipped, successfully downloaded source segments are reused after
-processing failures, final outputs are written atomically, and each download
-receives one initial attempt plus three retries by default.
+The pipeline downloads only the time range specified in the metadata. It is
+resumable, validates outputs before publishing them, keeps dataset files as real
+files rather than symbolic links, and retries each download three times after
+the initial attempt.
 
-## What the pipeline does
+## Pipeline
 
-1. Downloads the Hugging Face dataset snapshot to `$DATA_ROOT/multtipop`.
-2. Replaces and verifies all symlinks so the dataset consists of real local files.
-3. Reads `metadata.json`, `dev.json`/`test.json`, or per-item `meta.json` files.
-4. Uses `yt-dlp` to select audio by sample rate and then bitrate, and downloads only
-   each metadata time range.
-5. Decodes to 48 kHz stereo and runs the official FlashSR model in overlapping
-   5.12-second chunks. Linear cross-fades remove chunk boundary discontinuities.
-6. Encodes the result as Opus (`libopus`, 256 kbit/s VBR), MP3 (`libmp3lame`,
-   320 kbit/s CBR), or lossless 24-bit FLAC. The codec, sample rate, channel
-   count, and duration are validated with `ffprobe` before publishing the final
-   file.
+```mermaid
+flowchart LR
+    A["Hugging Face snapshot<br/>metadata + MIDI"] --> B["Resolve YouTube<br/>time range"]
+    B --> C["yt-dlp<br/>audio download"]
+    C --> D["FlashSR<br/>48 kHz stereo"]
+    D --> E{"Encode"}
+    E --> O["Opus"]
+    E --> M["MP3 320k"]
+    E --> F["FLAC 24-bit"]
+    O & M & F --> V["FFprobe validation<br/>atomic publish"]
+    V --> R["$DATA_ROOT/multtipop/audio/{ID}"]
+    C -. "failed after retries" .-> L["logs/failed_ids.log"]
+```
 
 ## Requirements
 
-- Linux with an NVIDIA GPU and a CUDA-compatible driver
-- Conda (the setup script defaults to `/home/work/miniforge/bin/conda`)
-- Git, FFmpeg/FFprobe with `libopus`, `libmp3lame`, and FLAC support, npm, and
-  Node.js
-- Enough space for the dataset, temporary media, and approximately 3.4 GB of
-  FlashSR checkpoints
+- Linux, an NVIDIA GPU, and a CUDA-compatible driver
+- Conda, Git, npm, and Node.js
+- FFmpeg/FFprobe with Opus, MP3, and FLAC encoders
+- About 3.4 GB for FlashSR checkpoints, plus dataset and audio storage
 
-## Installation
+## Setup
 
 ```bash
-cd /home/work/G2SMusic/sungkyun/amt/multtipop-audio
+git clone https://github.com/mimbres/multtipop-audio.git
+cd multtipop-audio
 bash setup_env.sh
 ```
 
-The script creates `/home/work/miniforge/envs/multtipop_audio`, installs a CUDA
-12.6 PyTorch build, checks out a pinned FlashSR revision, installs the Python
-dependencies, and installs a project-local Node.js 22 runtime for yt-dlp.
-Override `CONDA_BIN`, `ENV_NAME`, or `ENV_PREFIX` when needed.
+The setup script creates a project-local `.venv`, installs a CUDA 12.6 PyTorch
+build and the pinned FlashSR revision, and installs a local Node.js 22 runtime.
+Set `CONDA_BIN` or `ENV_PREFIX` to override the detected Conda executable or
+environment location.
 
-Select a data root. `run_pipeline.sh` invokes the environment directly and
-isolates it from user-level Python packages:
+## Run
 
 ```bash
 export DATA_ROOT=/path/to/data
-```
-
-## Run everything
-
-```bash
 ./run_pipeline.sh --data-root "$DATA_ROOT"
 ```
 
-This produces `$DATA_ROOT/multtipop/audio/{ID}.opus`. Select another format
-without changing the rest of the workflow:
+Opus is the default (`libopus`, 256 kbit/s VBR). MP3 uses 320 kbit/s CBR and
+FLAC uses lossless 24-bit encoding:
 
 ```bash
-# 320 kbit/s MP3
 ./run_pipeline.sh --data-root "$DATA_ROOT" --format mp3
-
-# Lossless FLAC
 ./run_pipeline.sh --data-root "$DATA_ROOT" --format flac
-```
-
-Outputs of different formats can coexist because they use different filename
-extensions. Resume and overwrite checks apply only to the selected format.
-
-On the current `kt` server, the established AMT data root is:
-
-```bash
-./run_pipeline.sh --data-root /home/work/sungkyun/amt/data
 ```
 
 Useful options:
 
 ```text
---retries 3              Retries after the initial yt-dlp attempt
---cookies FILE           Netscape-format YouTube cookie file
---format opus|mp3|flac   Select output format (default: opus)
---id ID                  Process one ID (repeat to select several)
---limit N                Process the first N selected records
---keep-source            Retain downloaded source segments after success
---overwrite              Regenerate valid files in the selected format
---skip-dataset-download  Use an already downloaded dataset snapshot
---device cuda:0          Select the inference device
---opus-bitrate 256k      Set the Opus bitrate
---mp3-bitrate 320k       Set the MP3 constant bitrate
---flac-compression-level 8
-                         Set FLAC compression level (0-12; lossless at all levels)
---no-lowpass-input       Disable FlashSR's automatic low-pass preprocessing
+--retries N             Retries after the initial download attempt (default: 3)
+--cookies FILE          Netscape-format YouTube cookie file
+--format FORMAT         opus, mp3, or flac
+--id ID                 Process one ID; repeat to select multiple IDs
+--limit N               Process the first N selected records
+--keep-source           Keep downloaded source segments
+--overwrite             Regenerate valid outputs
+--skip-dataset-download Use an existing dataset snapshot
+--device DEVICE         FlashSR device (default: cuda:0)
 ```
 
-To run persistently over SSH:
-
-```bash
-mkdir -p "$DATA_ROOT/multtipop/logs"
-nohup ./run_pipeline.sh --data-root "$DATA_ROOT" \
-  > "$DATA_ROOT/multtipop/logs/launcher.log" 2>&1 &
-echo $! > "$DATA_ROOT/multtipop/logs/pipeline.pid"
-```
-
-Rerun the same command, including the same `--format`, after interruption.
-Completed files are detected and skipped automatically. Run only one complete
-pipeline at a time because all formats share the same progress and failure log
-files.
-
-## Monitor and troubleshoot
+Rerun the same command after interruption; valid outputs are skipped. Progress
+and failure details are written under `$DATA_ROOT/multtipop/logs/`:
 
 ```bash
 cat "$DATA_ROOT/multtipop/logs/status.json"
-tail -f "$DATA_ROOT/multtipop/logs/launcher.log"
+tail -f "$DATA_ROOT/multtipop/logs/pipeline.log"
 cat "$DATA_ROOT/multtipop/logs/failed_ids.log"
 ```
 
-Log files:
+If YouTube requires sign-in, update `yt-dlp` and pass exported Netscape-format
+cookies with `--cookies`. Never commit cookie files.
 
-- `status.json`: atomic progress snapshot, including counts and the current ID
-- `pipeline.log`: detailed application log
-- `launcher.log`: stdout/stderr from the background process
-- `failed_ids.log`: current failed IDs and failure stage
-- `download_failures.jsonl`: records whose four download attempts all failed
-- `processing_failures.jsonl`: FlashSR or output encoding failures
-- `failures.jsonl`: combined machine-readable failure history
+## Reference run
 
-YouTube periodically requires authentication or changes its player. Update
-`yt-dlp` first if extraction starts failing. If YouTube reports that sign-in is
-required, export browser cookies in Netscape format and pass `--cookies FILE`.
-Do not commit cookie files.
-
-## Individual stages
-
-Download source segments only (the dataset snapshot must already exist):
-
-```bash
-PYTHONPATH= PYTHONNOUSERSITE=1 \
-  /home/work/miniforge/envs/multtipop_audio/bin/python \
-  download_audio.py --data-root "$DATA_ROOT" --id ANmpGEL-oyM
-```
-
-Apply FlashSR and encode one local source file. The format is inferred from the
-output filename:
-
-```bash
-PYTHONPATH= PYTHONNOUSERSITE=1 \
-  /home/work/miniforge/envs/multtipop_audio/bin/python \
-  process_audio.py input.webm output.opus
-
-PYTHONPATH= PYTHONNOUSERSITE=1 \
-  /home/work/miniforge/envs/multtipop_audio/bin/python \
-  process_audio.py input.webm output.mp3
-
-PYTHONPATH= PYTHONNOUSERSITE=1 \
-  /home/work/miniforge/envs/multtipop_audio/bin/python \
-  process_audio.py input.webm output.flac
-```
-
-`process_audio.py` also accepts `--format`, `--opus-bitrate`, `--mp3-bitrate`,
-and `--flac-compression-level`. When `--format` is supplied, it must match the
-output filename extension.
-
-The complete workflow should normally use `run_pipeline.py`, because it provides
-resume checks, failure logs, cleanup, progress reporting, and atomic output.
+A completed 572-record Opus run produced 557 valid files: 555 were processed
+and 2 already-valid files were skipped. The remaining 15 records failed during
+download after retries. Their IDs and failure stage are tracked in
+[`failed_ids.log`](failed_ids.log). YouTube availability changes over time, so
+future results may differ.
 
 ## Tests
 
@@ -182,17 +107,14 @@ pytest -q
 
 ## Disclaimer
 
-This unofficial repository is not created or endorsed by the MulTTiPop authors
-or YouTube. All rights in the referenced music and recordings remain with their
-respective copyright holders; this repository grants no rights to that content.
-It is intended only for non-commercial research. Users are solely responsible
-for legal and license compliance. The software is provided as-is and used at
-your own risk; the maintainers accept no liability.
+This is an unofficial repository and is not endorsed by the MulTTiPop authors
+or YouTube. All music and recording rights remain with their respective owners.
+Use this software only for research, comply with applicable licenses and laws,
+and proceed at your own risk.
 
 ## Citation
 
-If you use [MulTTiPop](https://huggingface.co/datasets/gclef-cmu/multtipop),
-please cite the [original paper](https://arxiv.org/abs/2607.08756):
+Please cite the [MulTTiPop paper](https://arxiv.org/abs/2607.08756):
 
 ```bibtex
 @article{pruyne2026multtipop,

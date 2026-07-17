@@ -2,11 +2,15 @@
 set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PYTHON_BIN="${PYTHON_BIN:-/home/work/miniforge/envs/multtipop_audio/bin/python}"
+PYTHON_BIN="${PYTHON_BIN:-${PROJECT_ROOT}/.venv/bin/python}"
 
-# The managed kt shell exports a Python 3.12 user-package path globally. Keep
-# this Python 3.11 environment isolated and deterministic.
+# Keep the project environment isolated from user-level Python packages.
 unset PYTHONPATH
 export PYTHONNOUSERSITE=1
+
+if [[ ! -x "${PYTHON_BIN}" ]]; then
+  printf 'Python environment not found. Run setup_env.sh or set PYTHON_BIN.\n' >&2
+  exit 1
+fi
 
 exec "${PYTHON_BIN}" "${PROJECT_ROOT}/run_pipeline.py" "$@"
